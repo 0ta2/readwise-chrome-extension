@@ -76,10 +76,6 @@ function injectReadAmazon(){
 
 	confirmCorrectAccount()
 
-	if (BASE_URL.indexOf("local") === -1){
-		injectScript(chrome.extension.getURL('js/rollbar.js'), 'body');
-	}
-
 	document.addEventListener("doneImport", onDoneImport);
 
 	chrome.runtime.sendMessage({command: "start", azCookie: document.cookie}, function(response) {
@@ -154,37 +150,32 @@ function pullMetadata() {
 	});
 }
 
-
-if (/Google Inc/.test(navigator.vendor)) {
-	chrome.extension.sendMessage({}, function(response) {
-		var readyStateCheckInterval = setInterval(function() {
-		if (document.readyState === "complete") {
-			clearInterval(readyStateCheckInterval);
-			if (document.URL.match(/\/kp\/notebook/) && document.URL.match(/(\?|&)ft/) ) {
-				injectReadAmazon();
-			}
-			else if (document.URL.match(/readwise/) && document.URL.match(/welcome/)) {
-				injectWelcomePage();
-			}
-		}
-	}, 10);
-	});
-
-} else {
-	$(document).ready(function(){
-		if (window.rwstarted){
-			return;
-		}
-		window.rwstarted = true;
-
-		if (document.URL.match(/\/kp\/notebook/)) {
-			injectReadAmazon();
-		}
-		else if (document.URL.match(/readwise/) && document.URL.match(/welcome/)) {
-			injectWelcomePage();
-		}
-	})
+// TODO: when we port to firefox, confirm this works there too
+async function injectScriptsWhenBackgroundIsReady() {
+  if (/Google Inc/.test(navigator.vendor)) {
+    // wait for the chrome background to wake up.. firefox doesn't need this i guess
+    const response = await chrome.runtime.sendMessage({});
+  }
+  var readyStateCheckInterval = setInterval(function() {
+    if (document.readyState === "complete") {
+      clearInterval(readyStateCheckInterval);
+      if (document.URL.match(/amazon/) && document.URL.match(/\/notebook/) && document.URL.match(/(\?|&)ft/)) {
+        injectReadAmazon();
+      } else if (document.URL.match(/readwise/) && document.URL.match(/welcome/)) {
+        injectWelcomePage();
+      }
+    }
+  }, 10);
 }
+
+
+$(document).ready(function(){
+  if (window.rwstarted){
+    return;
+  }
+  window.rwstarted = true;
+  injectScriptsWhenBackgroundIsReady();
+});
 
 
 
